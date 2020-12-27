@@ -6,6 +6,8 @@ class Server:
     def __init__(self):
         self.sockUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sockUDP.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        self.sockUDP.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.sockUDP.bind(('', 0))
         self.sockTCP = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sockTCP.setblocking(False)
         self.sockTCP.settimeout(10)  # stop looking for clients after 10 seconds
@@ -15,7 +17,7 @@ class Server:
         self.tcpPort = 2100
         self.ip_mode()
         self.sockTCP.bind((self.ip, self.tcpPort))
-        self.sockUDP.bind((self.ip, 13117))
+        #self.sockUDP.bind(('', 0))
         self.sockTCP.listen(250)
         self.group1 = []
         self.group2 = []
@@ -36,10 +38,12 @@ class Server:
             self.broadcastIP = self.calculate_broadcast_ip(self.ip)
         else:
             self.ip = get_if_addr('eth1')
+            print(self.ip)
             #ip = socket.gethostbyname_ex(socket.gethostname())[-1]
             #self.ip = ip[len(ip) - 1]
             #self.ip = ip[0]
             self.broadcastIP = self.calculate_broadcast_ip(self.ip)
+            print(self.broadcastIP)
             #self.broadcastIP = "255.255.255.255"
 
     def calculate_broadcast_ip(self, serverIP):
@@ -68,8 +72,11 @@ class Server:
 
     def broadcastToClients(self):
         try:
+            self.broadcastIP = "255.255.255.255"
             msg = struct.pack('!IBH', 0xfeedbeef, 0x2, self.tcpPort)
-            self.sockUDP.sendto(msg, (self.broadcastIP, self.port))
+            self.sockUDP.sendto(msg, ('localhost', self.port))
+            print(str(self.tcpPort) + " " + self.broadcastIP + " " + str(self.port))
+            print(fg.pink + "sent broadcast" + colors.reset)
         except:
             print(fg.red + "Couldn't send a broadcast msg" + colors.reset)
 
