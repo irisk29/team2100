@@ -1,12 +1,14 @@
 from Design import *
 from scapy.all import *
-import keyboard
 import signal
+import tty, termios, sys
+import curses
 
 class Client:
 
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.settimeout(13)
         self.sockUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sockUDP.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.sockUDP.bind(('', 13117))
@@ -20,14 +22,13 @@ class Client:
         try:
             pck = struct.unpack('!IBH', broadcastMsg)
         except:
-            print(fg.red + "Wrong message format!" + colors.reset)
             return
         if pck[0] == 0xfeedbeef and pck[1] == 0x2:
             print("Received offer from " + serverAddr[0] + ", attempting to connect...")
             print(str(pck[2]))
             print(serverAddr)
             try:
-                self.sock.connect(('172.1.0.100', pck[2]))    # pck[2] = server port over TCP connection
+                self.sock.connect((serverAddr[0], pck[2]))    # pck[2] = server port over TCP connection
             except:
                 print(fg.red + "Warning - could not connect to server via TCP" + colors.reset)   
                 self.sockUDP.close()
@@ -43,34 +44,21 @@ class Client:
                 print(fg.red + "Warning - Could not reach the server!" + colors.reset)
             oldtime = time.time()
             try:
-                #keyboard.add_hotkey("a", lambda: self.sock.sendall(str.encode(key.char)))
-                #listener = keyboard.on_press(self.on_press)
-                #listener.start()  # start to listen on a separate thread
-                #listener.join()
-                #keyboardListener = threading.Thread(target=self.on_press,args=(oldtime,))
-                #keyboardListener.start()
-                #keyboardListener.join(10.0)
                 while not self.ten_seconds_passed(oldtime):     # the client will enter chars for 10 seconds
-                    inp = self.stdinWait("You have 5 seconds to type text and press <Enter>... ", "[no text]", int(10 - (time.time() - oldtime)), "Aw man! You ran out of time!!")
+                    inp = self.stdinWait("You have 10 seconds to type text and press <Enter>... ", "[no text]", int(10 - (time.time() - oldtime)), "Aw man! You ran out of time!!")
                     if not timeout:
-                        #print( "You entered " +  inp)
+                        print("entered: " + inp)
                         self.sock.sendall(str.encode(inp))
                     else:
                         return
-                    
-                #keyboard.unhook_all()
+                #curses.flushinp()
+                #stdscr.clear()  
+                 
             except Exception as err:
                 print(err)
 
-  # def on_press(self,key):
-     #   try:
-      #      k = key.char  # single-char keys
-       #     self.sock.sendall(str.encode(k))
-       # except:
-        #    return False
     def getchar(self):
         #Returns a single character from standard input
-        import tty, termios, sys
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
@@ -105,17 +93,11 @@ class Client:
     def interrupt(self, signum, frame):
         raise Exception("")
 
-    def on_press(self,oldtime):
-        try:
-            k = sys.stdin.read(1)  # single-char keys
-            self.sock.sendall(str.encode(k))
-        except Exception as e:
-           print(e)
-
     def ten_seconds_passed(self,oldtime):
         return time.time() - oldtime >= 10
 
     def end_connection(self):
+        timeout = False 
         try:
             finishMsg = self.sock.recv(1024)
             print(finishMsg.decode("utf-8"))
@@ -124,6 +106,8 @@ class Client:
             self.sockUDP.close()
         except:
             print(fg.red + "Warning - Could not reach the server!" + colors.reset)
+            self.sock.close()
+            self.sockUDP.close()
 
     def client_action(self):
         self.play()

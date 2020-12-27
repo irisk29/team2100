@@ -1,8 +1,9 @@
 from scapy.all import *
 from Design import *
+import multiprocessing 
 
 class Server:
-
+    
     def __init__(self):
         self.ip = "0"
         self.broadcastIP = "0"
@@ -12,7 +13,6 @@ class Server:
         self.sockUDP.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sockUDP.bind((self.ip, 0))
         self.sockTCP = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sockTCP.setblocking(False)
         self.sockTCP.settimeout(1)  # stop looking for clients after 1 seconds so accept won't block the broadcast msg
         self.port = 13117
         self.tcpPort = 2100
@@ -51,14 +51,20 @@ class Server:
             connectionSocket.send(str.encode(msg))
             oldtime = time.time()
             while not self.ten_seconds_passed(oldtime):
+                print(fg.blue + "before" + colors.reset)
                 char, clientAddr = connectionSocket.recvfrom(1024)
+                print(fg.blue + "after" + colors.reset)
                 char = char.decode("utf-8")
+                print(fg.green + "received: " + char + colors.reset)
                 self.increase_group_score(clientName)
                 self.collect_chars(char)
+                print(fg.blue + "the score in talk: " + str(self.group1Score) + colors.reset)
         except ConnectionResetError:
             print(fg.red + "The client " + clientName + " disconnected" + colors.reset)
+            print(fg.blue + "the score in c except: " + str(self.group1Score) + colors.reset)
             return
         except:
+            print(fg.blue + "the score in except: " + str(self.group1Score) + colors.reset)
             return
 
     def ten_seconds_passed(self, oldtime):
@@ -66,10 +72,8 @@ class Server:
 
     def broadcastToClients(self):
         try:
-            self.broadcastIP = "255.255.255.255"
             msg = struct.pack('!IBH', 0xfeedbeef, 0x2, self.tcpPort)
-            self.sockUDP.sendto(msg, ('localhost', self.port))
-            print(str(self.tcpPort) + " " + self.broadcastIP + " " + str(self.port))
+            self.sockUDP.sendto(msg, (self.broadcastIP, self.port))
             print(fg.pink + "sent broadcast" + colors.reset)
         except:
             print(fg.red + "Couldn't send a broadcast msg" + colors.reset)
@@ -87,18 +91,24 @@ class Server:
     def increase_group_score(self, clientName):
         for name in self.group1:
             if name == clientName:
-                with self.lock:
-                    self.group1Score = self.group1Score + 1
+                print(fg.yellow + "inc before" + colors.reset) 
+                self.lock.acquire()
+                self.group1Score = self.group1Score + 1
+                print(fg.pink + "new score: " + str(self.group1Score) + colors.reset)
+                self.lock.release()
+                print(fg.yellow + "inc after" + colors.reset)    
                 return
         for name in self.group2:
             if name == clientName:
-                with self.lock:
-                    self.group2Score = self.group2Score + 1
+                self.lock.acquire()
+                self.group2Score = self.group2Score + 1
+                self.lock.release()    
                 return
 
     def collect_chars(self, char):
         if len(str(char)) > 1:
             return
+        print(fg.purple + "collect before" + colors.reset)    
         self.lock.acquire()
         if char in self.charDict:
             oldCount = self.charDict[char]
@@ -108,6 +118,8 @@ class Server:
         else:
             self.charDict[char] = 1
         self.lock.release()
+        print(fg.purple + "collect after" + colors.reset) 
+        print(fg.blue + "the score: " + str(self.group1Score) + colors.reset)
 
     def run_game(self):
         for t in self.threadPool:
@@ -120,6 +132,7 @@ class Server:
         if self.group2Score > self.group1Score:
             winner = "Group 2"
             group = self.group2
+        print("at the end the score is: " + str(self.group1Score))    
         msg = "Game over!\nGroup 1 typed in " + str(self.group1Score) + "  characters. Group 2 typed in "
         msg = msg + str(self.group2Score) + "  characters.\n" + winner + " wins!\n\nCongratulations to the winners:\n"
         msg = msg + "==\n" + '\n'.join(group)
@@ -139,6 +152,10 @@ class Server:
                 self.bestTeam = (self.group2, self.group2Score)
 
     def clear_data(self):
+        for t in self.threadPool:
+            if t.is_alive():
+                print(fg.cyan + "still alive and killing it" + colors.reset)
+                t.terminate()
         self.group1 = []
         self.group2 = []
         self.clientsCounter = 0
@@ -178,7 +195,7 @@ class Server:
                         self.group2.append(clientName)
                     self.clientsCounter = self.clientsCounter + 1
                     self.clientConnection.append(connectionSocket)
-                    t = threading.Thread(target=self.talkToClient, args=(clientName, connectionSocket,))
+                    t = multiprocessing.Process(target=self.talkToClient, args=(clientName, connectionSocket,))
                     self.threadPool.append(t)
                 except:
                     x = 0
