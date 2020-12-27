@@ -9,7 +9,7 @@ class Client:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sockUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sockUDP.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        self.sockUDP.bind(('localhost', 13117))
+        self.sockUDP.bind(('', 13117))
         #self.ip = "192.168.1.175" - no need for that: the client can know the address of the server from the udp broadcast request
 
     def play(self):
