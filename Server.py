@@ -10,7 +10,7 @@ class Server:
         self.sockUDP.bind(('', 0))
         self.sockTCP = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sockTCP.setblocking(False)
-        self.sockTCP.settimeout(10)  # stop looking for clients after 10 seconds
+        self.sockTCP.settimeout(1)  # stop looking for clients after 1 seconds so accept won't block the broadcast msg
         self.ip = "0"
         self.broadcastIP = "0"
         self.port = 13117
@@ -174,9 +174,7 @@ class Server:
             timer = None
             while not (self.ten_seconds_passed(oldtime)):
                 try:
-                    timer = threading.Timer(1, self.broadcastToClients)  # sending broadcast msg every second
-                    timer.daemon = True
-                    timer.start()
+                    self.broadcastToClients()  # sending broadcast msg every second
                     connectionSocket, addr = self.sockTCP.accept()
                     clientName, clientAddr = connectionSocket.recvfrom(1024)
                     clientName = clientName.decode("utf-8")  # turns bytes to string
@@ -189,8 +187,9 @@ class Server:
                     t = threading.Thread(target=self.talkToClient, args=(clientName, connectionSocket,))
                     self.threadPool.append(t)
                 except:
-                    print(fg.darkgrey + "10 seconds has passed - the game shall begin!" + colors.reset)
-            timer.cancel()  # after 10 seconds the game need to start - no more broadcast msg
+                    x = 0
+                    
+            print(fg.darkgrey + "10 seconds has passed - the game shall begin!" + colors.reset)  # after 10 seconds the game need to start - no more broadcast msg
             winner = self.run_game()
             self.check_best_team(winner)
             print("Game over, sending out offer requests...")
