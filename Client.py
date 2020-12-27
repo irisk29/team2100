@@ -1,9 +1,7 @@
-import msvcrt
-import string
-
 from Design import *
 from scapy.all import *
 from pynput import keyboard
+import os
 
 class Client:
 

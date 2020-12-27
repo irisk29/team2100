@@ -35,10 +35,10 @@ class Server:
             self.ip = get_if_addr("eth2")
             self.broadcastIP = self.calculate_broadcast_ip(self.ip)
         else:
-            #self.ip = get_if_addr('eth1')
-            ip = socket.gethostbyname_ex(socket.gethostname())[-1]
+            self.ip = get_if_addr('eth1')
+            #ip = socket.gethostbyname_ex(socket.gethostname())[-1]
             #self.ip = ip[len(ip) - 1]
-            self.ip = ip[0]
+            #self.ip = ip[0]
             self.broadcastIP = self.calculate_broadcast_ip(self.ip)
             #self.broadcastIP = "255.255.255.255"
 
