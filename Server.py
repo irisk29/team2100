@@ -5,6 +5,7 @@ import multiprocessing
 class Server:
     
     def __init__(self):
+        self.manager = multiprocessing.Manager()
         self.ip = "0"
         self.broadcastIP = "0"
         self.ip_mode()
@@ -21,13 +22,13 @@ class Server:
         self.group1 = []
         self.group2 = []
         self.clientsCounter = 0
-        self.group1Score = 0
-        self.group2Score = 0
+        self.group1Score = self.manager.Value("g1",0)
+        self.group2Score = self.manager.Value("g2",0)
         self.threadPool = []
         self.clientConnection = []
-        self.charDict = {}  # bonus
+        self.charDict = self.manager.dict()  # bonus
         self.bestTeam = ([], -1)  # bonus
-        self.lock = threading.Lock()
+        self.lock = multiprocessing.Lock()
 
     def ip_mode(self):
         print("Is it grading mode?(y/n)")
@@ -58,13 +59,13 @@ class Server:
                 print(fg.green + "received: " + char + colors.reset)
                 self.increase_group_score(clientName)
                 self.collect_chars(char)
-                print(fg.blue + "the score in talk: " + str(self.group1Score) + colors.reset)
+                print(fg.blue + "the score in talk: " + str(self.group1Score.value) + colors.reset)
         except ConnectionResetError:
             print(fg.red + "The client " + clientName + " disconnected" + colors.reset)
-            print(fg.blue + "the score in c except: " + str(self.group1Score) + colors.reset)
+            print(fg.blue + "the score in c except: " + str(self.group1Score.value) + colors.reset)
             return
         except:
-            print(fg.blue + "the score in except: " + str(self.group1Score) + colors.reset)
+            print(fg.blue + "the score in except: " + str(self.group1Score.value) + colors.reset)
             return
 
     def ten_seconds_passed(self, oldtime):
@@ -92,24 +93,24 @@ class Server:
         for name in self.group1:
             if name == clientName:
                 print(fg.yellow + "inc before" + colors.reset) 
-                self.lock.acquire()
-                self.group1Score = self.group1Score + 1
-                print(fg.pink + "new score: " + str(self.group1Score) + colors.reset)
-                self.lock.release()
+                #self.lock.acquire()
+                self.group1Score.value = self.group1Score.value + 1
+                print(fg.pink + "new score: " + str(self.group1Score.value) + colors.reset)
+                #self.lock.release()
                 print(fg.yellow + "inc after" + colors.reset)    
                 return
         for name in self.group2:
             if name == clientName:
-                self.lock.acquire()
-                self.group2Score = self.group2Score + 1
-                self.lock.release()    
+                #self.lock.acquire()
+                self.group2Score.value = self.group2Score.value + 1
+                #self.lock.release()    
                 return
 
     def collect_chars(self, char):
         if len(str(char)) > 1:
             return
         print(fg.purple + "collect before" + colors.reset)    
-        self.lock.acquire()
+        #self.lock.acquire()
         if char in self.charDict:
             oldCount = self.charDict[char]
             self.charDict[char] = oldCount + 1
@@ -117,24 +118,24 @@ class Server:
              return
         else:
             self.charDict[char] = 1
-        self.lock.release()
+        #self.lock.release()
         print(fg.purple + "collect after" + colors.reset) 
-        print(fg.blue + "the score: " + str(self.group1Score) + colors.reset)
+        print(fg.blue + "the score: " + str(self.group1Score.value) + colors.reset)
 
     def run_game(self):
         for t in self.threadPool:
             t.start()
         for t in self.threadPool:
             t.join(10)  # wait for the clients to finish the game - 10 seconds
-
+        
         winner = "Group 1"
         group = self.group1
-        if self.group2Score > self.group1Score:
+        if self.group2Score.value > self.group1Score.value:
             winner = "Group 2"
             group = self.group2
-        print("at the end the score is: " + str(self.group1Score))    
-        msg = "Game over!\nGroup 1 typed in " + str(self.group1Score) + "  characters. Group 2 typed in "
-        msg = msg + str(self.group2Score) + "  characters.\n" + winner + " wins!\n\nCongratulations to the winners:\n"
+        print("at the end the score is: " + str(self.group1Score.value))    
+        msg = "Game over!\nGroup 1 typed in " + str(self.group1Score.value) + "  characters. Group 2 typed in "
+        msg = msg + str(self.group2Score.value) + "  characters.\n" + winner + " wins!\n\nCongratulations to the winners:\n"
         msg = msg + "==\n" + '\n'.join(group)
         for conn in self.clientConnection:
             try:
@@ -145,11 +146,11 @@ class Server:
 
     def check_best_team(self, winner):
         if winner == "Group 1":
-            if self.bestTeam[1] < self.group1Score:
-                self.bestTeam = (self.group1, self.group1Score)
+            if self.bestTeam[1] < self.group1Score.value:
+                self.bestTeam = (self.group1, self.group1Score.value)
         else:
-            if self.bestTeam[1] < self.group2Score:
-                self.bestTeam = (self.group2, self.group2Score)
+            if self.bestTeam[1] < self.group2Score.value:
+                self.bestTeam = (self.group2, self.group2Score.value)
 
     def clear_data(self):
         for t in self.threadPool:
@@ -159,11 +160,11 @@ class Server:
         self.group1 = []
         self.group2 = []
         self.clientsCounter = 0
-        self.group1Score = 0
-        self.group2Score = 0
+        self.group1Score = self.manager.Value("g1",0)
+        self.group2Score = self.manager.Value("g2",0)
         self.threadPool = []
         self.clientConnection = []
-        self.charDict = {}
+        self.charDict = self.manager.dict()
 
     def show_statistics(self):
         commChar = ""
