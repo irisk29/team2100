@@ -18,7 +18,7 @@ class Server:
         self.port = 13117
         self.tcpPort = 2100
         self.sockTCP.bind((self.ip, self.tcpPort))
-        self.sockTCP.listen(250)
+        self.sockTCP.listen(5) # the max num of clients that can connect to the game
         self.group1 = []
         self.group2 = []
         self.clientsCounter = 0
@@ -34,8 +34,9 @@ class Server:
         print("Is it grading mode?(y/n)")
         c = sys.stdin.read(1)
         if c.__eq__("y\n"):
-            self.ip = get_if_addr("eth2")
-            self.broadcastIP = self.calculate_broadcast_ip(self.ip)
+            self.ip = get_if_addr('eth1')
+            ip = get_if_addr("eth2")
+            self.broadcastIP = self.calculate_broadcast_ip(ip)
         else:
             self.ip = get_if_addr('eth1')
             self.broadcastIP = self.calculate_broadcast_ip(self.ip)
@@ -163,6 +164,8 @@ class Server:
         self.group1Score = self.manager.Value("g1",0)
         self.group2Score = self.manager.Value("g2",0)
         self.threadPool = []
+        for conn in self.clientConnection:
+            conn.close()
         self.clientConnection = []
         self.charDict = self.manager.dict()
 
@@ -211,5 +214,5 @@ class Server:
 
 if __name__ == '__main__':
     b = Server()
-    print('Initializing Server')
+    print('Server started, listening on IP address ' + str(b.ip))
     b.listen_clients()
