@@ -11,12 +11,12 @@ class Client:
         self.sock.settimeout(13)
         self.sockUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sockUDP.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        self.sockUDP.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sockUDP.bind(('', 13117))
         #self.ip = "192.168.1.175" - no need for that: the client can know the address of the server from the udp broadcast request
 
     def play(self):
         print("Client started, listening for offer requests...")
-        #self.sockUDP.sendto(str.encode("a"),(get_if_addr('eth1'),13117))
         broadcastMsg,serverAddr = self.sockUDP.recvfrom(4096)
         pck = None
         try:
@@ -25,8 +25,8 @@ class Client:
             return
         if pck[0] == 0xfeedbeef and pck[1] == 0x2:
             print("Received offer from " + serverAddr[0] + ", attempting to connect...")
-            print(str(pck[2]))
-            print(serverAddr)
+            #print(str(pck[2]))
+            #print(serverAddr)
             try:
                 self.sock.connect((serverAddr[0], pck[2]))    # pck[2] = server port over TCP connection
             except:
@@ -45,7 +45,7 @@ class Client:
             oldtime = time.time()
             try:
                 while not self.ten_seconds_passed(oldtime):     # the client will enter chars for 10 seconds
-                    inp = self.stdinWait("You have 10 seconds to type text and press <Enter>... ", "[no text]", int(10 - (time.time() - oldtime)), "Aw man! You ran out of time!!")
+                    inp = self.stdinWait("You have 10 seconds to type text ", "[no text]", int(10 - (time.time() - oldtime)), "Aw man! You ran out of time!!")
                     if not timeout:
                         print("entered: " + inp)
                         self.sock.sendall(str.encode(inp))

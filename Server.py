@@ -6,7 +6,7 @@ class Server:
     
     def __init__(self):
         self.manager = multiprocessing.Manager()
-        self.ip = "0"
+        self.ip = get_if_addr('eth1')
         self.broadcastIP = "0"
         self.ip_mode()
         self.sockUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -34,11 +34,9 @@ class Server:
         print("Is it grading mode?(y/n)")
         c = sys.stdin.read(1)
         if c.__eq__("y\n"):
-            self.ip = get_if_addr('eth1')
             ip = get_if_addr("eth2")
             self.broadcastIP = self.calculate_broadcast_ip(ip)
         else:
-            self.ip = get_if_addr('eth1')
             self.broadcastIP = self.calculate_broadcast_ip(self.ip)
 
     def calculate_broadcast_ip(self, serverIP):
@@ -53,20 +51,20 @@ class Server:
             connectionSocket.send(str.encode(msg))
             oldtime = time.time()
             while not self.ten_seconds_passed(oldtime):
-                print(fg.blue + "before" + colors.reset)
+                #print(fg.blue + "before" + colors.reset)
                 char, clientAddr = connectionSocket.recvfrom(1024)
-                print(fg.blue + "after" + colors.reset)
+                #print(fg.blue + "after" + colors.reset)
                 char = char.decode("utf-8")
-                print(fg.green + "received: " + char + colors.reset)
+                #print(fg.green + "received: " + char + colors.reset)
                 self.increase_group_score(clientName)
                 self.collect_chars(char)
-                print(fg.blue + "the score in talk: " + str(self.group1Score.value) + colors.reset)
+                #print(fg.blue + "the score in talk: " + str(self.group1Score.value) + colors.reset)
         except ConnectionResetError:
             print(fg.red + "The client " + clientName + " disconnected" + colors.reset)
-            print(fg.blue + "the score in c except: " + str(self.group1Score.value) + colors.reset)
+            #print(fg.blue + "the score in c except: " + str(self.group1Score.value) + colors.reset)
             return
         except:
-            print(fg.blue + "the score in except: " + str(self.group1Score.value) + colors.reset)
+            #print(fg.blue + "the score in except: " + str(self.group1Score.value) + colors.reset)
             return
 
     def ten_seconds_passed(self, oldtime):
@@ -76,7 +74,7 @@ class Server:
         try:
             msg = struct.pack('!IBH', 0xfeedbeef, 0x2, self.tcpPort)
             self.sockUDP.sendto(msg, (self.broadcastIP, self.port))
-            print(fg.pink + "sent broadcast" + colors.reset)
+            #print(fg.pink + "sent broadcast" + colors.reset)
         except:
             print(fg.red + "Couldn't send a broadcast msg" + colors.reset)
 
@@ -93,12 +91,12 @@ class Server:
     def increase_group_score(self, clientName):
         for name in self.group1:
             if name == clientName:
-                print(fg.yellow + "inc before" + colors.reset) 
+                #print(fg.yellow + "inc before" + colors.reset) 
                 #self.lock.acquire()
                 self.group1Score.value = self.group1Score.value + 1
-                print(fg.pink + "new score: " + str(self.group1Score.value) + colors.reset)
+                #print(fg.pink + "new score: " + str(self.group1Score.value) + colors.reset)
                 #self.lock.release()
-                print(fg.yellow + "inc after" + colors.reset)    
+                #print(fg.yellow + "inc after" + colors.reset)    
                 return
         for name in self.group2:
             if name == clientName:
@@ -110,7 +108,7 @@ class Server:
     def collect_chars(self, char):
         if len(str(char)) > 1:
             return
-        print(fg.purple + "collect before" + colors.reset)    
+        #print(fg.purple + "collect before" + colors.reset)    
         #self.lock.acquire()
         if char in self.charDict:
             oldCount = self.charDict[char]
@@ -120,8 +118,8 @@ class Server:
         else:
             self.charDict[char] = 1
         #self.lock.release()
-        print(fg.purple + "collect after" + colors.reset) 
-        print(fg.blue + "the score: " + str(self.group1Score.value) + colors.reset)
+        #print(fg.purple + "collect after" + colors.reset) 
+        #print(fg.blue + "the score: " + str(self.group1Score.value) + colors.reset)
 
     def run_game(self):
         for t in self.threadPool:
@@ -134,7 +132,7 @@ class Server:
         if self.group2Score.value > self.group1Score.value:
             winner = "Group 2"
             group = self.group2
-        print("at the end the score is: " + str(self.group1Score.value))    
+        #print("at the end the score is: " + str(self.group1Score.value))    
         msg = "Game over!\nGroup 1 typed in " + str(self.group1Score.value) + "  characters. Group 2 typed in "
         msg = msg + str(self.group2Score.value) + "  characters.\n" + winner + " wins!\n\nCongratulations to the winners:\n"
         msg = msg + "==\n" + '\n'.join(group)
@@ -156,7 +154,7 @@ class Server:
     def clear_data(self):
         for t in self.threadPool:
             if t.is_alive():
-                print(fg.cyan + "still alive and killing it" + colors.reset)
+                #print(fg.cyan + "still alive and killing it" + colors.reset)
                 t.terminate()
         self.group1 = []
         self.group2 = []
