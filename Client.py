@@ -14,7 +14,7 @@ class Client:
         self.sockUDP.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sockUDP.bind(('', 13117))
         #self.ip = "192.168.1.175" - no need for that: the client can know the address of the server from the udp broadcast request
-
+           
     def play(self):
         print("Client started, listening for offer requests...")
         broadcastMsg,serverAddr = self.sockUDP.recvfrom(4096)

@@ -31,9 +31,8 @@ class Server:
         self.lock = multiprocessing.Lock()
 
     def ip_mode(self):
-        print("Is it grading mode?(y/n)")
-        c = sys.stdin.read(1)
-        if c.__eq__("y\n"):
+        c = input("Is it grading mode? (y/n):")
+        if c == "y":
             self.ip = get_if_addr("eth2")
             self.broadcastIP = self.calculate_broadcast_ip(self.ip)
         else:
@@ -189,6 +188,7 @@ class Server:
                 try:
                     self.broadcastToClients()  # sending broadcast msg every second
                     connectionSocket, addr = self.sockTCP.accept()
+                    connection.settimeout(10)
                     clientName, clientAddr = connectionSocket.recvfrom(1024)
                     clientName = clientName.decode("utf-8")  # turns bytes to string
                     if self.clientsCounter % 2 == 0:
