@@ -47,7 +47,7 @@ class Client:
                 while not self.ten_seconds_passed(oldtime):     # the client will enter chars for 10 seconds
                     inp = self.stdinWait("You have 10 seconds to type text ", "[no text]", int(10 - (time.time() - oldtime)), "Aw man! You ran out of time!!")
                     if not timeout:
-                        print("entered: " + inp)
+                        #print("entered: " + inp)
                         self.sock.sendall(str.encode(inp))
                     else:
                         return
