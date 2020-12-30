@@ -34,8 +34,8 @@ class Server:
         print("Is it grading mode?(y/n)")
         c = sys.stdin.read(1)
         if c.__eq__("y\n"):
-            ip = get_if_addr("eth2")
-            self.broadcastIP = self.calculate_broadcast_ip(ip)
+            self.ip = get_if_addr("eth2")
+            self.broadcastIP = self.calculate_broadcast_ip(self.ip)
         else:
             self.broadcastIP = self.calculate_broadcast_ip(self.ip)
 
