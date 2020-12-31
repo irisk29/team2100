@@ -8,36 +8,35 @@ class Client:
 
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.settimeout(13)
+        self.sock.settimeout(13) # if the server doesn't respond(taking too long) the client will drop the connection and move on
         self.sockUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sockUDP.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.sockUDP.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.magic_cookie = 0xfeedbeef
+        self.msg_type = 0x2
+        self.recv_size = 2048
         self.sockUDP.bind(('', 13117)) 
     
     def play(self):
         print("Client started, listening for offer requests...")
-        broadcastMsg,serverAddr = self.sockUDP.recvfrom(4096)
+        broadcastMsg,serverAddr = self.sockUDP.recvfrom(self.recv_size)
         pck = None
         try:
             pck = struct.unpack('!IBH', broadcastMsg)
         except:
             return
-        if pck[0] == 0xfeedbeef and pck[1] == 0x2:
+        if pck[0] == self.magic_cookie and pck[1] == self.msg_type:
             print("Received offer from " + serverAddr[0] + ", attempting to connect...")
-            #print(str(pck[2]))
-            #print(serverAddr)
             try:
                 self.sock.connect((serverAddr[0], pck[2]))    # pck[2] = server port over TCP connection
             except:
                 print(fg.red + "Warning - could not connect to server via TCP" + colors.reset)   
                 self.sockUDP.close()
                 return 
-            #name = input("Please enter your group name:")
-            #name = name + '\n'
             name = "It Burns When IP\n"
             try:
                 self.sock.send(str.encode(name))
-                welcomeMsg = self.sock.recv(2048)
+                welcomeMsg = self.sock.recv(self.recv_size)
                 print(welcomeMsg.decode("utf-8"))
             except:
                 print(fg.red + "Warning - Could not reach the server!" + colors.reset)
@@ -46,13 +45,9 @@ class Client:
                 while not self.ten_seconds_passed(oldtime):     # the client will enter chars for 10 seconds
                     inp = self.stdinWait("You have 10 seconds to type text ", "[no text]", int(10 - (time.time() - oldtime)), "Aw man! You ran out of time!!")
                     if not timeout:
-                        #print("entered: " + inp)
                         self.sock.sendall(str.encode(inp))
                     else:
                         return
-                #curses.flushinp()
-                #stdscr.clear()  
-                 
             except Exception as err:
                 print(err)
 
@@ -77,9 +72,9 @@ class Client:
             timeout = False
         except (KeyboardInterrupt):
             printInterrupt = kwargs.get("printInterrupt", True)
-            #if printInterrupt:
-            #    print(fg.red + "Warning - Keyboard interrupt!" + colors.reset)
-            timeout = True # Do this so you don't mistakenly get input when there is none
+            if printInterrupt:
+                print(fg.red + "Warning - Keyboard interrupt!" + colors.reset)
+            timeout = True # so we won't get input when there is none
             inp = default
         except:
             timeout = True
@@ -98,7 +93,7 @@ class Client:
     def end_connection(self):
         timeout = False 
         try:
-            finishMsg = self.sock.recv(1024)
+            finishMsg = self.sock.recv(self.recv_size)
             print(finishMsg.decode("utf-8"))
             print("Server disconnected, listening for offer requests...")
             self.sock.close()
