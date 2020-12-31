@@ -12,15 +12,7 @@ class Client:
         self.sockUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sockUDP.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.sockUDP.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        bindInterface = self.get_interface()
-        self.sockUDP.setsockopt(socket.SOL_SOCKET, 25, bindInterface) # 25 is for SO_BINDTODEVICE
-        self.sockUDP.bind(('', 13117))
-     
-    def get_interface(self):
-        grading = input("Is it grading mode? (y/n):")
-        if grading == "y":
-            return str("eth2" + '\0').encode('utf-8')
-        return str("eth1" + '\0').encode('utf-8')  
+        self.sockUDP.bind(('', 13117)) 
     
     def play(self):
         print("Client started, listening for offer requests...")
