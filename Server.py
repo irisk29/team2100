@@ -28,8 +28,12 @@ class Server:
         self.clientConnection = []
         self.charDict = self.manager.dict()  # bonus
         self.bestTeam = ([], -1)  # bonus
-        self.lock = multiprocessing.Lock()
-
+        self.broadcast = '255'
+        self.recv_size = 2048
+        self.magic_cookie = 0xfeedbeef
+        self.msg_type = 0x2
+        self.duration_of_game = 10
+        
     def ip_mode(self):
         c = input("Is it grading mode? (y/n):")
         if c == "y":
@@ -40,8 +44,8 @@ class Server:
 
     def calculate_broadcast_ip(self, serverIP):
         broadcastIP = serverIP.split('.')
-        broadcastIP[3] = '255'
-        broadcastIP[2] = '255'
+        broadcastIP[3] = self.broadcast
+        broadcastIP[2] = self.broadcast
         return '.'.join(broadcastIP)
 
     def talkToClient(self, clientName, connectionSocket):
@@ -49,31 +53,24 @@ class Server:
         try:
             connectionSocket.send(str.encode(msg))
             oldtime = time.time()
-            while not self.ten_seconds_passed(oldtime):
-                #print(fg.blue + "before" + colors.reset)
-                char, clientAddr = connectionSocket.recvfrom(1024)
-                #print(fg.blue + "after" + colors.reset)
+            while not self.ten_seconds_passed(oldtime): # the client has 10 sec to play
+                char, clientAddr = connectionSocket.recvfrom(self.recv_size) # receiving the char from client
                 char = char.decode("utf-8")
-                #print(fg.green + "received: " + char + colors.reset)
                 self.increase_group_score(clientName)
-                self.collect_chars(char)
-                #print(fg.blue + "the score in talk: " + str(self.group1Score.value) + colors.reset)
+                self.collect_chars(char) # the bonus method
         except ConnectionResetError:
             print(fg.red + "The client " + clientName + " disconnected" + colors.reset)
-            #print(fg.blue + "the score in c except: " + str(self.group1Score.value) + colors.reset)
             return
         except:
-            #print(fg.blue + "the score in except: " + str(self.group1Score.value) + colors.reset)
             return
 
     def ten_seconds_passed(self, oldtime):
-        return time.time() - oldtime >= 10
+        return time.time() - oldtime >= self.duration_of_game
 
     def broadcastToClients(self):
         try:
-            msg = struct.pack('!IBH', 0xfeedbeef, 0x2, self.tcpPort)
+            msg = struct.pack('!IBH', self.magic_cookie, self.msg_type, self.tcpPort)
             self.sockUDP.sendto(msg, (self.broadcastIP, self.port))
-            #print(fg.pink + "sent broadcast" + colors.reset)
         except:
             print(fg.red + "Couldn't send a broadcast msg" + colors.reset)
 
@@ -90,25 +87,14 @@ class Server:
     def increase_group_score(self, clientName):
         for name in self.group1:
             if name == clientName:
-                #print(fg.yellow + "inc before" + colors.reset) 
-                #self.lock.acquire()
-                self.group1Score.value = self.group1Score.value + 1
-                #print(fg.pink + "new score: " + str(self.group1Score.value) + colors.reset)
-                #self.lock.release()
-                #print(fg.yellow + "inc after" + colors.reset)    
+                self.group1Score.value = self.group1Score.value + 1  
                 return
         for name in self.group2:
             if name == clientName:
-                #self.lock.acquire()
-                self.group2Score.value = self.group2Score.value + 1
-                #self.lock.release()    
+                self.group2Score.value = self.group2Score.value + 1 
                 return
 
-    def collect_chars(self, char):
-        if len(str(char)) > 1:
-            return
-        #print(fg.purple + "collect before" + colors.reset)    
-        #self.lock.acquire()
+    def collect_chars(self, char): # will collect all the chars from the clients in the current game for the statistic function
         if char in self.charDict:
             oldCount = self.charDict[char]
             self.charDict[char] = oldCount + 1
@@ -116,9 +102,6 @@ class Server:
              return
         else:
             self.charDict[char] = 1
-        #self.lock.release()
-        #print(fg.purple + "collect after" + colors.reset) 
-        #print(fg.blue + "the score: " + str(self.group1Score.value) + colors.reset)
 
     def run_game(self):
         for t in self.threadPool:
@@ -130,8 +113,7 @@ class Server:
         group = self.group1
         if self.group2Score.value > self.group1Score.value:
             winner = "Group 2"
-            group = self.group2
-        #print("at the end the score is: " + str(self.group1Score.value))    
+            group = self.group2    
         msg = "Game over!\nGroup 1 typed in " + str(self.group1Score.value) + "  characters. Group 2 typed in "
         msg = msg + str(self.group2Score.value) + "  characters.\n" + winner + " wins!\n\nCongratulations to the winners:\n"
         msg = msg + "==\n" + '\n'.join(group)
@@ -153,8 +135,7 @@ class Server:
     def clear_data(self):
         for t in self.threadPool:
             if t.is_alive():
-                #print(fg.cyan + "still alive and killing it" + colors.reset)
-                t.terminate()
+                t.terminate() #after the join the process might be still alive - for the new game there should be no process running
         self.group1 = []
         self.group2 = []
         self.clientsCounter = 0
@@ -181,15 +162,14 @@ class Server:
 
     def listen_clients(self):
         while True:
-            #m, firstClientAddr = self.sockUDP.recvfrom(2048)
             oldtime = time.time()
             timer = None
             while not (self.ten_seconds_passed(oldtime)):
                 try:
                     self.broadcastToClients()  # sending broadcast msg every second
                     connectionSocket, addr = self.sockTCP.accept()
-                    #connection.settimeout(10)
-                    clientName, clientAddr = connectionSocket.recvfrom(1024)
+                    connection.settimeout(self.duration_of_game) #if the server won't receive group name from the client in the max time(10 sec) the server should drop the connection
+                    clientName, clientAddr = connectionSocket.recvfrom(self.recv_size)
                     clientName = clientName.decode("utf-8")  # turns bytes to string
                     if self.clientsCounter % 2 == 0:
                         self.group1.append(clientName)
@@ -199,8 +179,8 @@ class Server:
                     self.clientConnection.append(connectionSocket)
                     t = multiprocessing.Process(target=self.talkToClient, args=(clientName, connectionSocket,))
                     self.threadPool.append(t)
-                except:
-                    x = 0
+                except Exception as e:
+                    print(e)
                     
             print(fg.darkgrey + "10 seconds has passed - the game shall begin!" + colors.reset)  # after 10 seconds the game need to start - no more broadcast msg
             winner = self.run_game()
