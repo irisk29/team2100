@@ -188,7 +188,7 @@ class Server:
                 try:
                     self.broadcastToClients()  # sending broadcast msg every second
                     connectionSocket, addr = self.sockTCP.accept()
-                    connection.settimeout(10)
+                    #connection.settimeout(10)
                     clientName, clientAddr = connectionSocket.recvfrom(1024)
                     clientName = clientName.decode("utf-8")  # turns bytes to string
                     if self.clientsCounter % 2 == 0:
