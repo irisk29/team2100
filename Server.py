@@ -168,7 +168,6 @@ class Server:
                 try:
                     self.broadcastToClients()  # sending broadcast msg every second
                     connectionSocket, addr = self.sockTCP.accept()
-                    connection.settimeout(self.duration_of_game) #if the server won't receive group name from the client in the max time(10 sec) the server should drop the connection
                     clientName, clientAddr = connectionSocket.recvfrom(self.recv_size)
                     clientName = clientName.decode("utf-8")  # turns bytes to string
                     if self.clientsCounter % 2 == 0:
